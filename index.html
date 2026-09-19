@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Vision Lab · 真伪大挑战</title>
+  <meta name="description" content="测试你能否识破 AI 生成的图像，并体验 AI 动物图真伪检测">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css?v=5">
+</head>
+<body>
+
+  <!-- ==================== 顶部导航 ==================== -->
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="logo" href="#quiz" data-tab="quiz" aria-label="AI Vision Lab 首页">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-text">AI&nbsp;VISION&nbsp;LAB</span>
+      </a>
+
+      <div class="nav-tabs" id="navTabs">
+        <button class="tab-btn" data-tab="consent" type="button">知情同意</button>
+        <button class="tab-btn active" data-tab="quiz" type="button">真伪大挑战</button>
+        <button class="tab-btn" data-tab="detector" type="button">AI 动物图检测</button>
+        <span class="tab-indicator" id="tabIndicator" aria-hidden="true"></span>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- ==================== 页面〇：知情同意（独立页，可随时更改选择） ==================== -->
+    <section class="page" id="page-consent" aria-label="知情同意">
+      <div class="glass-card consent-card">
+        <p class="hero-eyebrow">INFORMED CONSENT · 知情同意</p>
+        <h2 class="hero-title gradient-text">知情同意书</h2>
+        <div class="consent-body">
+          <p>您好！我们正在开展一项关于「人们如何辨别 AI 生成图像」的学术研究。</p>
+          <ul>
+            <li><b>参与内容</b>：观看 10 张图片，判断哪些是 AI 生成的，并选择判断依据，全程约 3 分钟。</li>
+            <li><b>数据与隐私</b>：匿名收集，不收集姓名、联系方式或 IP 地址；作答数据仅用于学术研究，并以汇总形式呈现。</li>
+            <li><b>自愿参与</b>：您可随时关闭页面退出，无需任何理由，这不会带来任何不利影响。</li>
+            <li><b>参与资格</b>：不设限制，任何人均可参加。</li>
+          </ul>
+        </div>
+        <p class="consent-status" id="consentStatus"></p>
+        <div class="consent-actions">
+          <button class="btn btn-primary" id="consentAgreeBtn" type="button">同意参与研究</button>
+          <button class="btn btn-ghost" id="consentDenyBtn" type="button">暂不参与</button>
+        </div>
+        <p class="consent-note">无论是否同意，你都可以正常体验全部页面；以上选择可随时回来修改。</p>
+      </div>
+    </section>
+
+    <!-- ==================== 页面一：真伪大挑战（问卷） ==================== -->
+    <section class="page active" id="page-quiz" aria-label="真伪大挑战">
+
+      <!-- 说明卡片 -->
+      <div class="glass-card hero-card">
+        <p class="hero-eyebrow">CHALLENGE 01 · HUMAN VS AI</p>
+        <h1 class="hero-title gradient-text">你能识破 AI 生成的图像吗？</h1>
+        <ul class="hero-rules">
+          <li>共 <b class="num">10</b> 张图片，AI 图与真实照片混杂其中</li>
+          <li><b>点击图片</b>代表你判断它是 AI 生成（再次点击可取消；不点击即判为真实照片）</li>
+          <li>标注任意数量后即可提交，随后为你<b>标注为 AI 的图片</b>选择判断依据</li>
+        </ul>
+        <button class="btn btn-primary btn-lg" id="startQuizBtn" type="button">开始挑战</button>
+        <p class="hero-note">全程约 3 分钟 · 数据匿名收集，仅用于学术研究<br><a class="hero-link" href="#consent">如愿意支持本研究，请在「知情同意」页选择参与（可跳过）</a></p>
+      </div>
+
+      <!-- 问卷区域：标注网格 / 依据模态框 / 结果页（quiz.js 驱动） -->
+      <div class="quiz-area" id="quizArea">
+
+        <!-- 标注阶段 -->
+        <div id="quizPlay" hidden>
+          <div class="quiz-toolbar glass-card">
+            <span class="quiz-progress" id="quizProgress">已标注 0 / 10</span>
+            <button class="btn btn-primary" id="submitBtn" type="button">提交</button>
+          </div>
+          <div class="quiz-grid" id="quizGrid"></div>
+        </div>
+
+        <!-- 判断依据模态框（提交后逐图弹出） -->
+        <div class="modal" id="clueModal" hidden>
+          <div class="modal-card glass-card">
+            <p class="modal-progress" id="clueProgress"></p>
+            <h3 class="modal-title">你判断这张图的依据是？</h3>
+            <img class="clue-thumb" id="clueThumb" alt="当前图片缩略图">
+            <div class="clue-options" id="clueOptions"></div>
+            <input class="clue-other-input" id="clueOtherText" type="text"
+                   placeholder="请补充说明你的依据…" hidden>
+            <p class="clue-hint" id="clueHint" hidden>请至少选择一项判断依据</p>
+            <div class="modal-nav">
+              <button class="btn btn-ghost" id="cluePrev" type="button">上一张</button>
+              <button class="btn btn-primary" id="clueNext" type="button">下一张</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 结果页 -->
+        <div id="quizResult" hidden>
+          <div class="glass-card result-card">
+            <p class="hero-eyebrow">RESULT · YOUR SCORE</p>
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"></circle>
+              </svg>
+              <div class="ring-num"><span id="accuracyNum">0</span>%</div>
+            </div>
+            <p class="result-summary" id="resultSummary"></p>
+            <div class="review-grid" id="reviewGrid"></div>
+            <div class="result-actions">
+              <button class="btn btn-primary" id="exportBtn" type="button">导出我的作答数据</button>
+              <button class="btn btn-ghost" id="retryBtn" type="button">再玩一局</button>
+              <button class="btn btn-ghost" id="backHomeBtn" type="button">返回开始页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 页面二：AI 动物图检测 ==================== -->
+    <section class="page" id="page-detector" aria-label="AI 动物图检测">
+
+      <!-- 说明卡片 -->
+      <div class="glass-card hero-card">
+        <p class="hero-eyebrow">TOOL 02 · AI IMAGE DETECTOR</p>
+        <h1 class="hero-title gradient-text">AI 动物图检测</h1>
+        <p class="hero-desc">上传一张<b>写实风格动物图片</b>，模型将判断它是否为 AI 生成，并给出置信度。</p>
+      </div>
+
+      <!-- 上传与结果区域（detector.js 驱动，三状态切换） -->
+      <div class="detector-area" id="detectorArea">
+
+        <!-- 状态一：模型未就绪占位（探测 models/animal_detector.onnx 失败时显示） -->
+        <div class="glass-card placeholder-card" id="modelPlaceholder">
+          <div class="placeholder-icon" aria-hidden="true">
+            <span class="pulse-ring"></span>
+            <span class="pulse-core"></span>
+          </div>
+          <h2 class="placeholder-title">模型训练中，敬请期待</h2>
+          <p class="placeholder-desc">检测模型正在训练与优化，完成后此处将自动开放上传入口。</p>
+          <button class="btn btn-ghost" id="demoBtn" type="button">界面演示（模拟结果）</button>
+        </div>
+
+        <!-- 状态二：上传与预览 -->
+        <div class="glass-card upload-card" id="uploadCard" hidden>
+          <!-- 拖拽/点击上传区 -->
+          <div class="dropzone" id="dropzone" role="button" tabindex="0"
+               aria-label="上传图片：拖拽或点击选择">
+            <span class="dz-icon" aria-hidden="true">⇪</span>
+            <p class="dz-text">拖拽图片到此处，或<b>点击上传</b></p>
+            <p class="dz-hint">支持 JPG / PNG / WebP，不超过 20MB</p>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+          </div>
+
+          <!-- 预览区（选择文件后显示） -->
+          <div class="preview-wrap" id="previewWrap" hidden>
+            <div class="preview-stage">
+              <img id="previewImg" alt="待检测图片预览">
+              <span class="scanline" id="scanline" aria-hidden="true"></span>
+            </div>
+            <p class="preview-name" id="previewName"></p>
+            <div class="preview-actions">
+              <button class="btn btn-primary" id="detectBtn" type="button">开始检测</button>
+              <button class="btn btn-ghost" id="reselectBtn" type="button">重新选择</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 状态三：检测结果 -->
+        <div id="detectorResult" hidden>
+          <div class="glass-card result-card">
+            <p class="demo-tag" id="demoTag" hidden>演示模式 · 模型未接入，结果为随机模拟数据</p>
+            <div class="verdict-badge" id="verdictBadge">—</div>
+            <div class="confidence-block">
+              <p class="conf-label">模型置信度</p>
+              <div class="confidence-bar">
+                <span class="conf-fill" id="confFill"></span>
+              </div>
+              <p class="conf-num"><span id="confNum">0.0</span>%</p>
+            </div>
+            <p class="detector-note">本模型针对写实风格动物图片训练，其他类型图片结果不可靠。<br>结果仅供参考，模型仍在迭代中。</p>
+            <div class="result-actions">
+              <button class="btn btn-primary" id="againBtn" type="button">再测一张</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>AI VISION LAB · 数字媒体研究项目 · 图片数据仅用于学术研究</p>
+  </footer>
+
+  <!-- 图片池清单（tools/build_manifest.py 生成）+ 问卷逻辑 -->
+  <script src="./data/manifest.js"></script>
+  <!-- onnxruntime-web：浏览器端 ONNX 推理引擎（本地化部署，避免 CDN 不可达；
+       detector.js 依赖 window.ort，须先加载） -->
+  <script src="./js/ort/ort.min.js"></script>
+  <script src="./js/storage.js?v=2"></script>
+  <script src="./js/consent.js" defer></script>
+  <script src="./js/main.js?v=2" defer></script>
+  <script src="./js/quiz.js?v=6" defer></script>
+  <script src="./js/detector.js?v=3" defer></script>
+</body>
+</html>
