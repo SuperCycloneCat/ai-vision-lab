@@ -626,6 +626,24 @@ b.num { font-family: var(--font-num); font-size: 1.15em; }
 .review-cell.tag-err { border-color: rgba(239, 68, 68, 0.55); }
 .review-cell.tag-err span { background: var(--err); color: #fff; }
 
+/* AI 生成图角标（结果页复盘）：左上角紫色胶囊，与右上角 ✓/✗ 并存；
+   选择器与 .tag-ok/.tag-err span 同特异性且位于其后，确保覆盖圆形对错标样式 */
+.review-cell span.ai-badge {
+  top: 6px;
+  left: 6px;
+  right: auto;
+  width: auto;
+  height: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: rgba(139, 92, 246, 0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 .result-actions {
   display: flex;
   flex-wrap: wrap;

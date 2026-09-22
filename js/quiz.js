@@ -10,7 +10,8 @@
 
   /* ============ 配置 ============ */
   const QUIZ_SIZE = 10;          // 每局判断题数量
-  const AI_TARGET = 5;           // 目标 AI 图数量（池内不足时自动下调，用真实图补足）
+  const AI_MIN = 3;              // 每局 AI 图数量下限
+  const AI_MAX = 5;              // 每局 AI 图数量上限（3~5 随机：固定比例会被数题猜出真伪）
   const ATTENTION_CHECK_ENABLED = false; // 改为 true：随机位置插入 1 张纯色图注意力检测
 
   const CLUES = [
@@ -84,12 +85,17 @@
     const aiAll = shuffle(pool.filter((i) => i.is_ai && !i.is_attention));
     const realAll = shuffle(pool.filter((i) => !i.is_ai && !i.is_attention));
 
-    const nAI = Math.min(AI_TARGET, aiAll.length);
+    // 每局 AI 图数量在 [AI_MIN, AI_MAX] 内随机（池内不足时自动下调，用真实图补足）
+    const nAI = Math.min(
+      AI_MIN + Math.floor(Math.random() * (AI_MAX - AI_MIN + 1)),
+      aiAll.length
+    );
     const nReal = QUIZ_SIZE - nAI;
-    const items = aiAll
-      .slice(0, nAI)
-      .concat(realAll.slice(0, nReal))
-      .map((img) => ({ ...img, marked: false, markedAt: null, clues: [], clueOther: "" }));
+    // 抽够真伪数量后必须整体打乱：否则 AI 图恒在前 5 位、真实图恒在后 5 位，
+    // 参与者可凭位置猜答案（2026-09-22 修复）
+    const items = shuffle(aiAll.slice(0, nAI).concat(realAll.slice(0, nReal))).map(
+      (img) => ({ ...img, marked: false, markedAt: null, clues: [], clueOther: "" })
+    );
 
     // 注意力检测题：随机位置插入
     if (ATTENTION_CHECK_ENABLED) {
@@ -279,6 +285,14 @@
       tag.textContent = ok ? "✓" : "✗";
       cell.appendChild(img);
       cell.appendChild(tag);
+      // AI 生成图加「AI 生成」角标：作答结束后揭示真相，便于参与者复盘
+      //（仅结果页展示，答题过程中不暴露 is_ai，不影响盲判）
+      if (it.is_ai) {
+        const badge = document.createElement("span");
+        badge.className = "ai-badge";
+        badge.textContent = "AI 生成";
+        cell.appendChild(badge);
+      }
       reviewGrid.appendChild(cell);
     });
 
