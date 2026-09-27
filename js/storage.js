@@ -1,11 +1,13 @@
 /* ============================================================
-   storage.js · 数据存储（云端回收版）
-   双通道设计：Supabase 云端优先 → 失败自动降级为本地 JSON 导出
-   （参与者在任何网络环境下作答都不会丢失）
+   storage.js · 数据存储（云端提交 + 本地下载双按钮版）
+   结果页两个独立按钮，互不联动：
+     - 「提交我的作答数据」→ submitRecord：只走 Supabase 云端，
+       失败仅 toast 提示，不自动触发下载（由参与者自行改点下载按钮）
+     - 「下载数据 (JSON)」  → downloadRecord：本地 JSON 文件下载
 
    依赖：js/lib/supabase.min.js（需在 index.html 中先于本文件加载，
          全局暴露 window.supabase.createClient）
-   配置：见下方 SUPABASE_URL / SUPABASE_ANON_KEY（未配置时自动走本地通道）
+   配置：见下方 SUPABASE_URL / SUPABASE_ANON_KEY（未配置时云端必然失败）
    建表与权限配置步骤：见 notes/Supabase数据回收部署指南.md
    ============================================================ */
 
@@ -18,8 +20,8 @@
      2. Project Settings → API 页面复制：
         - Project URL      → 填入 SUPABASE_URL（形如 https://xxxx.supabase.co）
         - anon public key  → 填入 SUPABASE_ANON_KEY（eyJ 开头的长串）
-     3. 两项任一为空串时，saveRecord 自动走"本地 JSON 导出"通道，
-        网站其余功能完全不受影响 —— 可先上线再补配置 */
+     3. 两项任一为空串时，submitRecord 云端必然失败（toast 提示后由参与者
+        自行下载保存），网站其余功能完全不受影响 —— 可先上线再补配置 */
   const SUPABASE_URL = "https://egucidiywupssbwxykol.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_5y6uCcrriUetoyNmMWUQKA_I1yJ2ult";
   const TABLE = "responses"; // 云端表名（与建表语句一致，勿随意改）
@@ -71,7 +73,7 @@
     }
   }
 
-  /** 触发浏览器下载 JSON 文件（降级通道 / 数据副本） */
+  /** 触发浏览器下载 JSON 文件（「下载数据」按钮专用，独立于云端通道） */
   function downloadRecord(record) {
     const blob = new Blob([JSON.stringify(record, null, 2)], {
       type: "application/json",
@@ -121,8 +123,8 @@
 
   /**
    * 轻提示 toast（深色玻璃拟态风格，与全站一致；2.6s 自动消失）。
-   * 仅在云端提交成功时展示 —— 本地降级时浏览器自带的下载动作
-   * 已经给了参与者明确反馈，无需重复提示。
+   * 云端提交的成功/失败均由此提示；本地下载按钮不提示 ——
+   * 浏览器自带的下载动作已经是明确反馈。
    */
   function showToast(msg) {
     const t = document.createElement("div");
@@ -139,17 +141,19 @@
   }
 
   /**
-   * 统一保存入口（quiz.js 的 exportBtn 调用，接口与旧版完全兼容）：
-   * 云端成功 → toast 确认；任何失败 → 自动降级为本地 JSON 下载。
+   * 云端提交入口（quiz.js 结果页「提交我的作答数据」按钮调用）：
+   * 只走 Supabase，失败不自动降级下载；成功/失败均有 toast 反馈。
+   * 返回 Promise<boolean>：true = 已入库（quiz.js 据此锁定按钮防重复插入）；
+   * false = 失败（按钮恢复可点，参与者可重试或改点「下载数据」）。
    */
-  function saveRecord(record) {
-    saveToCloud(record).then((ok) => {
-      if (ok) {
-        showToast("作答数据已提交，感谢参与研究！");
-      } else {
-        downloadRecord(record);
-      }
-    });
+  async function submitRecord(record) {
+    const ok = await saveToCloud(record);
+    if (ok) {
+      showToast("作答数据已提交，感谢参与研究！");
+    } else {
+      showToast("云端提交失败，请点击「下载数据」按钮保存作答");
+    }
+    return ok;
   }
 
   // 挂到全局，供 quiz.js 使用
@@ -157,8 +161,8 @@
     makeParticipantId,
     getParticipantId,
     nextRoundNumber,
-    saveRecord,
+    submitRecord,
     downloadRecord,
-    saveToCloud,
+    saveToCloud, // 底层单次云端插入（无 UI 反馈），调试用
   };
 })();

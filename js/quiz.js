@@ -33,6 +33,7 @@
   let clueIndex = 0;        // 依据弹窗当前题目下标（quizItems 内）
   let clueTargets = [];     // 需采集依据的题目下标 = 用户标注为 AI 的图
   let attentionPassed = null; // null=未启用
+  let cloudSubmitted = false; // 本局是否已成功云端提交（防 Supabase 重复插入）
 
   /* ============ DOM ============ */
   const $ = (id) => document.getElementById(id);
@@ -54,7 +55,8 @@
   const accuracyNum = $("accuracyNum");
   const resultSummary = $("resultSummary");
   const reviewGrid = $("reviewGrid");
-  const exportBtn = $("exportBtn");
+  const cloudBtn = $("cloudBtn");     // 提交我的作答数据（云端 Supabase）
+  const exportBtn = $("exportBtn");   // 下载数据 (JSON)（本地文件）
   const retryBtn = $("retryBtn");
   const backHomeBtn = $("backHomeBtn"); // 结果页：返回开始挑战页（说明卡）
   const startBtn = $("startQuizBtn");
@@ -314,8 +316,27 @@
       ringFg.style.strokeDashoffset = LEN * (1 - acc);
     });
 
-    // 导出按钮绑定本局记录
-    exportBtn.onclick = () => window.storage.saveRecord(record);
+    // 云端提交与本地下载拆为两个独立按钮，互不联动（v10）：
+    // 云端失败仅 toast 提示并恢复按钮，由参与者自行决定重试或改点下载
+    cloudSubmitted = false;
+    cloudBtn.disabled = false;
+    cloudBtn.textContent = "提交我的作答数据";
+    cloudBtn.onclick = async () => {
+      if (cloudSubmitted) return; // 已成功入库：忽略重复点击
+      cloudBtn.disabled = true;
+      cloudBtn.textContent = "提交中…";
+      const ok = await window.storage.submitRecord(record);
+      if (ok) {
+        cloudSubmitted = true;
+        cloudBtn.textContent = "已提交 ✓"; // 成功后保持锁定，防止云端表出现重复行
+      } else {
+        cloudBtn.disabled = false; // 失败恢复，可重试；也可改点「下载数据」
+        cloudBtn.textContent = "提交我的作答数据";
+      }
+    };
+
+    // 本地 JSON 下载：独立通道，无论云端成败均可随时下载副本
+    exportBtn.onclick = () => window.storage.downloadRecord(record);
   }
 
   /* ============ 局控制 ============ */
